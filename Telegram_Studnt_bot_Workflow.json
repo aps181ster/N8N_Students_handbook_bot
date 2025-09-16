@@ -1,0 +1,234 @@
+{
+  "name": "Telegram_Studnt_bot_Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        48,
+        -32
+      ],
+      "id": "2db38182-14a2-4727-a0fb-3dd00044b642",
+      "name": "Telegram Trigger",
+      "webhookId": "b867e399-a4e9-476e-974f-e4874633a1e5",
+      "credentials": {
+        "telegramApi": {
+          "id": "mkYa7g9TXlzRn04o",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "You are a student handbook assistant. You should generate and summarize answers only from the provided student handbook context.\nIf the context does not contain relevant information to the question, you should say: \"Sorry! I can't find relevant information from the student handbook.\"\nDo not provide any additional information or interpretation beyond the given context.\nYou should not generate or interpret any responses from your knowledge."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        -32
+      ],
+      "id": "13bd765e-f60c-4d84-9a6f-97ebc3618536",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        112,
+        176
+      ],
+      "id": "82739f69-aa01-4c08-b156-db8331fdf4ff",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "i5O9mkHvHGG8n8Vj",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.message.text }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        176
+      ],
+      "id": "a11f75e4-6e12-450e-9572-8d9d691f3589",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        -32
+      ],
+      "id": "726e09cd-9370-472c-ad58-6ed2af7933b3",
+      "name": "Send a text message",
+      "webhookId": "faab94ec-5b3e-4194-a890-32f6b77ae5d5",
+      "credentials": {
+        "telegramApi": {
+          "id": "mkYa7g9TXlzRn04o",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "students-handbook",
+          "mode": "list",
+          "cachedResultName": "students-handbook"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        544,
+        192
+      ],
+      "id": "caf15eb0-ca52-40d5-9d70-dbee01af5472",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "ZV8AgGaL9fb5q16p",
+          "name": "PineconeApi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 512
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        336
+      ],
+      "id": "903f67f8-dabb-43ab-beab-ad406db853d4",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "i5O9mkHvHGG8n8Vj",
+          "name": "OpenAi account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "de782c78-4ee1-40c1-84d2-d4a13432ef1c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e08d520b32d55c68e3fe5ca024a06897773266470c2dd7f53fcd1a357ba7f974"
+  },
+  "id": "Wv3z0FLrJA1pHh1J",
+  "tags": []
+}
